@@ -2,6 +2,11 @@
 
 piWorkout is a series of Desktop and Mobile applications designed to play a YouTube video only multiple screens synchronized with a workout stopwatch and with allowances for bluetooth audio latency and video latency.
 
+- [piWorkout Server](../piworkout-server)
+- [piWorkout Desktop](../piworkout-desktop)
+- [piWorkout Android](../piworkout-android)
+- [piWorkout iOS](../piworkout-ios)
+
 # piWorkout Desktop 
 
 piWorkout Desktop is the Windows, MacOS, and Linux Desktop client to connect to the piWorkout Server and watch videos. piWorkout Desktop is based on Electron.
