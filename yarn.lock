@@ -6820,6 +6820,11 @@ jake@^10.8.5:
     filelist "^1.0.1"
     minimatch "^3.0.4"
 
+jdataview@^2.5.0:
+  version "2.5.0"
+  resolved "https://registry.yarnpkg.com/jdataview/-/jdataview-2.5.0.tgz#3081b3fea651f9317ec6bd4feb2ddc98aa41d595"
+  integrity sha512-ZJop3D5nyDcWPBPv4NPnhCvx3HgQNsCXMfw8gpNKY16BobgxmVF+kJ08aHuqk6bJQVeL2mkf6nDCcZPMompalw==
+
 jest-changed-files@^27.5.1:
   version "27.5.1"
   resolved "https://registry.npmjs.org/jest-changed-files/-/jest-changed-files-27.5.1.tgz"
