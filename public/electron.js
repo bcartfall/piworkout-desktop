@@ -9,6 +9,9 @@ const { app, BrowserWindow, ipcMain, shell, Menu } = require('electron');
 const isDev = require('electron-is-dev');
 const Store = require('electron-store');
 
+// disable smooth scrolling
+app.commandLine.appendSwitch('disable-smooth-scrolling', 'true');
+
 function createWindow() {
   if (!isDev) {
     // no menu
