@@ -5,6 +5,7 @@
  */
 
 import jDataView from 'jdataview';
+import { Buffer } from 'buffer';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { LinearProgress, Tooltip } from '@mui/material';
@@ -19,6 +20,7 @@ export default function VideoPlayerProgress({ currentVideo, progress, onChangePr
   const progressRef = useRef(null);
   const bif = useRef(null);
   const storyBoardImage = useRef(null);
+  const mouseState = useRef('up');
 
   const onMouseMove = (event) => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -55,6 +57,10 @@ export default function VideoPlayerProgress({ currentVideo, progress, onChangePr
       }
       storyBoardImage.current.style.left = sbX + 'px';
     }
+
+    if (mouseState.current === 'down') {
+      seekFromMouse(event);
+    }
   };
 
   const onMouseEnter = useCallback(() => {
@@ -65,13 +71,18 @@ export default function VideoPlayerProgress({ currentVideo, progress, onChangePr
     }
   }, [storyBoardImage, bif, currentVideo,]);
 
-  const onMouseLeave = useCallback(() => {
+  const onMouseLeave = (event) => {
     if (storyBoardImage.current) {
       storyBoardImage.current.style.display = 'none';
     }
-  }, [storyBoardImage,]);
 
-  const onClick = (event) => {
+    if (mouseState.current === 'down') {
+      seekFromMouse(event);
+    }
+    mouseState.current = 'up';
+  };
+
+  const seekFromMouse = (event) => {
     event.preventDefault();
     event.stopPropagation();
     const rect = event.currentTarget.getBoundingClientRect();
@@ -80,6 +91,15 @@ export default function VideoPlayerProgress({ currentVideo, progress, onChangePr
     const mousePos = x / rect.width;
     const time = currentVideo.duration * mousePos;
     onChangeProgress(time);
+  };
+
+  const onMouseDown = (event) => {
+    mouseState.current = 'down';
+    seekFromMouse(event);
+  };
+
+  const onMouseUp = (event) => {
+    mouseState.current = 'up';
   };
 
   const getStoryboard = useCallback((position) => {
@@ -99,7 +119,10 @@ export default function VideoPlayerProgress({ currentVideo, progress, onChangePr
       return buffer;
     }
 
-    buffer += btoa(String.fromCharCode.apply(null, new Uint8Array(obj.arrayBuffer.slice(frame.offset, frame.offset + frame.length))));
+    // buf.toString('base64')
+    buffer += Buffer.from(new Uint8Array(obj.arrayBuffer.slice(frame.offset, frame.offset + frame.length))).toString('base64');
+
+    //buffer += btoa(String.fromCharCode.apply(null, new Uint8Array(obj.arrayBuffer.slice(frame.offset, frame.offset + frame.length))));
     return buffer;
   }, [bif, currentVideo,]);
 
@@ -188,7 +211,7 @@ export default function VideoPlayerProgress({ currentVideo, progress, onChangePr
           },
         }}
       >
-        <LinearProgress ref={progressRef} variant="determinate" className="videoPlayerProgress" value={progress} sx={{ height: '15px', cursor: 'pointer' }} onClick={onClick} onMouseMove={onMouseMove} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave} />
+        <LinearProgress ref={progressRef} variant="determinate" className="videoPlayerProgress" value={progress} sx={{ height: '15px', cursor: 'pointer' }} onMouseDown={onMouseDown} onMouseUp={onMouseUp} onMouseMove={onMouseMove} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave} />
       </Tooltip>
       <img ref={storyBoardImage} src="" alt="Story Board" style={{ position: 'absolute', width: '320px', height: '180px', zIndex: '1', top: '-226px', borderRadius: '8px', border: '2px solid white', display: 'none' }} />
     </>
