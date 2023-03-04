@@ -193,7 +193,7 @@ export default function VideoPlayerProgress({ currentVideo, progress, onChangePr
 
   return (
     <>
-      <LinearProgress ref={progressRef} variant="determinate" className="videoPlayerProgress" value={progress} sx={{ height: '15px', cursor: 'pointer' }} onMousfDown={onMouseDown} onMouseUp={onMouseUp} onMouseMove={onMouseMove} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave} />
+      <LinearProgress ref={progressRef} variant="determinate" className="videoPlayerProgress" value={progress} sx={{ height: '15px', cursor: 'pointer' }} onMouseDown={onMouseDown} onMouseUp={onMouseUp} onMouseMove={onMouseMove} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave} />
       <span ref={tooltip} style={{ position: 'absolute', width: 'auto', padding: '4px 8px', textAlign: 'center', fontSize: '0.8rem', zIndex: '1', top: '-35px', borderRadius: '4px', backgroundColor: '#444', color: '#fff', display: 'none' }}>0:00</span>
       <img ref={storyBoardImage} src="" alt="Story Board" style={{ position: 'absolute', width: '320px', height: '180px', zIndex: '1', top: '-226px', borderRadius: '8px', border: '2px solid white', display: 'none' }} />
     </>
