@@ -65,7 +65,6 @@ export default function VideoPlayerProgress({ currentVideo, progress, onChangePr
 
   const onMouseEnter = useCallback(() => {
     const found = !!(storyBoardImage.current && bif.current && bif.current[currentVideo.id]);
-    console.log('mouseEnter', found);
     if (storyBoardImage.current && bif.current && bif.current[currentVideo.id]) {
       storyBoardImage.current.style.display = 'block';
     }
