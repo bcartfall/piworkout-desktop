@@ -18,7 +18,7 @@
     "eject": "react-scripts eject",
     "electron:dev": "concurrently -k \"cross-env BROWSER=none npm start\" \"npm:electron\"",
     "electron": "wait-on http://127.0.0.1:3000 && electron .",
-    "package": "electron-forge package",
+    "package": "react-scripts build && electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish"
   },
