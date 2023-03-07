@@ -50,6 +50,7 @@ export default function Settings(props) {
         setError(null);
         setConnecting(false);
         setHasBackendFailure(false);
+        props.setFailedToConnect(false);
 
         // save
         controller.setLocalSettings('backendHost', backendHost);

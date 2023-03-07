@@ -17,8 +17,9 @@ import '@fontsource/roboto/500.css';
 import '@fontsource/roboto/700.css';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { HashRouter, Routes, Route } from "react-router-dom";
-import { CircularProgress, Typography } from '@mui/material';
+import { HashRouter, Routes, Route, Link } from "react-router-dom";
+import { CircularProgress, Typography, Alert, Button } from '@mui/material';
+import SettingsIcon from '@mui/icons-material/Settings';
 
 import Layout from './pages/Layout';
 import Main from './pages/Main';
@@ -39,6 +40,7 @@ export default function App(props) {
   });
 
   const [connected, setConnected] = useState(false);
+  const [failedToConnect, setFailedToConnect] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [settings, setSettings] = useState({
     audioDelay: '',
@@ -61,8 +63,13 @@ export default function App(props) {
       // setup controller
       const isElectron = true;
       controller.current = new Controller({ layout, setLayout, settings, setSettings, videos, setVideos, setConnected, setLoaded, isElectron });
+
+      controller.current.getClient().onFailedToConnect(() => {
+        console.log('setting on failed to connect');
+        setFailedToConnect(true);
+      });
     }
-  }, [controller, layout, settings, videos]);
+  }, [controller, layout, settings, videos, setFailedToConnect, ]);
 
   useEffect(() => {
       // listen to keyevents
@@ -77,13 +84,24 @@ export default function App(props) {
 
   let routes = '';
 
-  if (loaded) {
+  if (loaded || failedToConnect) {
     routes = (
       <HashRouter>
         <Routes>
           <Route path="/" element={<Layout layout={layout} controller={controller.current} />}>
-            <Route index element={<Main controller={controller.current} connected={connected} videos={videos} />} />
-            <Route path="settings" element={<Settings controller={controller.current} settings={settings} />} />
+            <Route index={failedToConnect} element={
+              <Alert severity="error" action={
+                <Link to="/settings" className="link">
+                  <Button variant="outlined" size="small">
+                    <SettingsIcon fontSize="small" sx={{ mr: 0.5 }} /> Settings
+                  </Button>
+                </Link>
+              }>
+                Failed to connect to server.
+              </Alert>
+            } />
+            <Route index={connected} element={<Main controller={controller.current} connected={connected} videos={videos} />} />
+            <Route path="settings" element={<Settings controller={controller.current} settings={settings} setFailedToConnect={setFailedToConnect} />} />
             <Route path="player/:id" element={<Player controller={controller.current} connected={connected} />} />
             <Route path="*" element={<Main controller={controller.current} connected={connected} videos={videos} />} />
           </Route>
