@@ -4,7 +4,7 @@
  * See README.md
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { Alert, Button } from '@mui/material';
 import PiVideo from '../components/PiVideo';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -16,8 +16,6 @@ export default function Main({ controller, videos, connected }) {
 
   const [searchParams, ] = useSearchParams();
 
-  let sendingApi = useRef(false);
-
   useEffect(() => {
     // check if we need to redirect to settings page
     const localSettings = controller.getLocalSettings();
@@ -27,24 +25,6 @@ export default function Main({ controller, videos, connected }) {
 
     // update title
     controller.setTitle('');
-
-    if (!sendingApi.current) {
-      // connect with YouTube API
-      sendingApi.current = true;
-      if (searchParams.get('state')) {
-        // update api with state
-        const data = {
-          'namespace': 'connect',
-          'method': 'PUT',
-          'state': searchParams.get('state'),
-          'scope': searchParams.get('scope'),
-          'url': window.location.href,
-        };
-        console.log('sending api state', data);
-        controller.send(data);
-        navigate('/');
-      }
-    }
   }, [controller, navigate, searchParams]);
 
   const onConnect = () => {
@@ -53,6 +33,7 @@ export default function Main({ controller, videos, connected }) {
       'namespace': 'connect',
       'method': 'GET',
       'action': 'authorizationUrl',
+      'redirectUri': controller.getUrl(''), // will open browser to backend
     });
   };
 
