@@ -11,7 +11,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import YouTubeIcon from '@mui/icons-material/YouTube';
 
-export default function Main({ controller, videos, connected }) {
+export default function Main({ controller, videos, connected, failedToConnect }) {
   const navigate = useNavigate();
 
   const [searchParams, ] = useSearchParams();
@@ -77,8 +77,23 @@ export default function Main({ controller, videos, connected }) {
 
   return (
     <div className="page">
-      {connectElement}
-      {videoElement}
+      {failedToConnect && 
+        <Alert severity="error" action={
+          <Link to="/settings" className="link">
+            <Button variant="outlined" size="small">
+              <SettingsIcon fontSize="small" sx={{ mr: 0.5 }} /> Settings
+            </Button>
+          </Link>
+        }>
+          Failed to connect to server.
+        </Alert>
+      }
+      {!failedToConnect &&
+        <>
+          {connectElement}
+          {videoElement}
+        </>
+      }
     </div>
   );
 }

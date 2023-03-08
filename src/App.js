@@ -17,9 +17,8 @@ import '@fontsource/roboto/500.css';
 import '@fontsource/roboto/700.css';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { HashRouter, Routes, Route, Link } from "react-router-dom";
-import { CircularProgress, Typography, Alert, Button } from '@mui/material';
-import SettingsIcon from '@mui/icons-material/Settings';
+import { HashRouter, Routes, Route } from "react-router-dom";
+import { CircularProgress, Typography } from '@mui/material';
 
 import Layout from './pages/Layout';
 import Main from './pages/Main';
@@ -89,21 +88,10 @@ export default function App(props) {
       <HashRouter>
         <Routes>
           <Route path="/" element={<Layout layout={layout} controller={controller.current} />}>
-            <Route index={failedToConnect} element={
-              <Alert severity="error" action={
-                <Link to="/settings" className="link">
-                  <Button variant="outlined" size="small">
-                    <SettingsIcon fontSize="small" sx={{ mr: 0.5 }} /> Settings
-                  </Button>
-                </Link>
-              }>
-                Failed to connect to server.
-              </Alert>
-            } />
-            <Route index={connected} element={<Main controller={controller.current} connected={connected} videos={videos} />} />
+            <Route index element={<Main controller={controller.current} connected={connected} videos={videos} failedToConnect={failedToConnect} />} />
             <Route path="settings" element={<Settings controller={controller.current} settings={settings} setFailedToConnect={setFailedToConnect} />} />
             <Route path="player/:id" element={<Player controller={controller.current} connected={connected} />} />
-            <Route path="*" element={<Main controller={controller.current} connected={connected} videos={videos} />} />
+            <Route path="*" element={<Main controller={controller.current} connected={connected} videos={videos} failedToConnect={failedToConnect} />} />
           </Route>
         </Routes>
       </HashRouter>
