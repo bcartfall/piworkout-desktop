@@ -9,6 +9,9 @@ const { app, BrowserWindow, ipcMain, shell, Menu } = require('electron');
 const isDev = require('electron-is-dev');
 const Store = require('electron-store');
 
+// store
+const store = new Store();
+
 // disable smooth scrolling
 app.commandLine.appendSwitch('disable-smooth-scrolling', 'true');
 
@@ -18,8 +21,29 @@ function createWindow() {
     Menu.setApplicationMenu(null);
   }
 
+  // manage win state from store
+  const getWinState = () => {
+    const winState = store.get('windowState', {
+      x: undefined,
+      y: undefined,
+      width: 1080,
+      height: 768,
+    });
+    return winState;
+  };
+
+  const setWinState = () => {
+    const winState = win.getBounds();
+    store.set('windowState', winState);
+  };
+
   // Create the browser window.
+  const winState = getWinState();
   const win = new BrowserWindow({
+    x: winState.x,
+    y: winState.y,
+    width: winState.width,
+    height: winState.height,
     backgroundColor: '#282c34',
     icon: path.join(__dirname, 'logo192.png'),
     show: false,
@@ -30,8 +54,12 @@ function createWindow() {
     },
   });
 
+  // set win state in setore
+  win.on('resize', setWinState);
+  win.on('move', setWinState);
+  win.on('close', setWinState);
+
   win.once('ready-to-show', () => {
-    win.maximize();
     win.show();
   });
 
@@ -52,9 +80,6 @@ function createWindow() {
 if (require("electron-squirrel-startup")) {
   app.quit();
 }
-
-// store
-const store = new Store();
 
 // IPC listener
 ipcMain.on('electron-store-get', async (event, val) => {

@@ -177,6 +177,12 @@ export class Controller {
       console.log('audio.play()', 'syncAudio');
       this._audio.play().catch(e => {
         console.error('Error playing audio', e);
+
+        // try again
+        setTimeout(() => {
+          this.syncAudio(action);
+        }, 1000);
+        return false;
       });
     } else if (action === 'pause') {
       this._audio.pause();
