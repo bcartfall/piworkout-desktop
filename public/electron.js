@@ -20,8 +20,6 @@ function createWindow() {
 
   // Create the browser window.
   const win = new BrowserWindow({
-    width: 1024,
-    height: 800,
     backgroundColor: '#282c34',
     icon: path.join(__dirname, 'logo192.png'),
     show: false,
@@ -33,7 +31,8 @@ function createWindow() {
   });
 
   win.once('ready-to-show', () => {
-    win.show()
+    win.maximize();
+    win.show();
   });
 
   // and load the index.html of the app.
