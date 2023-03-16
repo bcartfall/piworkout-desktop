@@ -26,6 +26,7 @@ export class Controller {
     this._setLoaded = setLoaded;
     this._currentVideo = null;
     this._client = null;
+    this._isElectron = isElectron;
 
     // load localSettings
     if (isElectron) {
@@ -40,6 +41,10 @@ export class Controller {
     }
     // load web socket
     this._client = new Client({ controller: this });
+  }
+
+  isElectron() {
+    return this._isElectron;
   }
 
   getLocalSettings(key = null, defaultValue = null) {

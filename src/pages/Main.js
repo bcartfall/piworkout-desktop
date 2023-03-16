@@ -9,9 +9,8 @@ import { Alert, Button } from '@mui/material';
 import PiVideo from '../components/PiVideo';
 import SettingsIcon from '@mui/icons-material/Settings';
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
-import YouTubeIcon from '@mui/icons-material/YouTube';
 
-export default function Main({ controller, videos, connected, failedToConnect }) {
+export default function Main({ controller, videos, failedToConnect }) {
   const navigate = useNavigate();
 
   const [searchParams, ] = useSearchParams();
@@ -26,30 +25,6 @@ export default function Main({ controller, videos, connected, failedToConnect })
     // update title
     controller.setTitle('');
   }, [controller, navigate, searchParams]);
-
-  const onConnect = () => {
-    // send request to get redirect url
-    controller.send({
-      'namespace': 'connect',
-      'method': 'GET',
-      'action': 'authorizationUrl',
-      'redirectUri': controller.getUrl(''), // will open browser to backend
-    });
-  };
-
-  let connectElement = '';
-  if (!connected) {
-    connectElement = (
-      <Alert severity="info" sx={{ mb: 2 }} action={
-        <Button variant="contained" size="small" onClick={onConnect}>
-          <YouTubeIcon fontSize="small" sx={{ mr: 0.5 }} />
-          Connect Now
-        </Button>
-      }>
-        You are not connected with the YouTube API.
-      </Alert>
-    );
-  }
 
   let videoElement;
   if (!videos.length) {
@@ -90,7 +65,6 @@ export default function Main({ controller, videos, connected, failedToConnect })
       }
       {!failedToConnect &&
         <>
-          {connectElement}
           {videoElement}
         </>
       }
