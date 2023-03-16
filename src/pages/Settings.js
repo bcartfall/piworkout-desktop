@@ -172,7 +172,7 @@ export default function Settings(props) {
             For API Key access enter in the key from the Google API credentials page in the field below:
           </Typography>
           <br />
-          <TextField fullWidth required label="Google API Key" value={settings.googleAPIKey} onChange={(e) => onChange('googleAPIKey', e.target.value)} />
+          <TextField fullWidth label="Google API Key" value={settings.googleAPIKey} onChange={(e) => onChange('googleAPIKey', e.target.value)} />
           <br /><br />
           {connectElement}
           <Divider sx={{ m: 2 }} />
