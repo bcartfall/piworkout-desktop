@@ -26,6 +26,8 @@ import Settings from './pages/Settings';
 import Player from './pages/Player';
 import { defaultSnack, Controller } from './controllers/Controller';
 
+const isElectron = true;
+
 const darkTheme = createTheme({
   palette: {
     mode: 'dark',
@@ -61,7 +63,6 @@ export default function App(props) {
   useEffect(() => {
     if (!controller.current) {
       // setup controller
-      const isElectron = true;
       controller.current = new Controller({ layout, setLayout, settings, setSettings, videos, setVideos, setConnected, setLoaded, isElectron });
 
       controller.current.getClient().onFailedToConnect(() => {

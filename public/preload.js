@@ -6,6 +6,8 @@
 
 const { contextBridge, ipcRenderer } = require('electron');
 
+let appOnBeforeClose = () => {};
+
 contextBridge.exposeInMainWorld('electron', {
   store: {
     get(key) {
@@ -20,4 +22,14 @@ contextBridge.exposeInMainWorld('electron', {
       ipcRenderer.send('electron-open-external', path);
     },
   },
+  app: {
+    onBeforeClose(callback) {
+      appOnBeforeClose = callback;
+    },
+  }
+});
+
+// catch events from main
+ipcRenderer.on('webcontents-app-before-close', _ => {
+  appOnBeforeClose();
 });

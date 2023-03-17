@@ -5,7 +5,7 @@
  */
 
 const path = require('path');
-const { app, BrowserWindow, ipcMain, shell, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, ipcRenderer, shell, Menu } = require('electron');
 const isDev = require('electron-is-dev');
 const Store = require('electron-store');
 
@@ -74,6 +74,10 @@ function createWindow() {
   if (isDev) {
     win.webContents.openDevTools({ mode: 'detach' });
   }
+
+  win.on('close', (e) => {
+    win.webContents.send('webcontents-app-before-close');
+  });
 }
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling

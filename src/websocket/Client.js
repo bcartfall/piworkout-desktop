@@ -55,7 +55,7 @@ export default class Client {
   }
 
   send(json) {
-    this._ws.send(JSON.stringify(json));
+    return this._ws.send(JSON.stringify(json));
   }
 
   onOpen(event) {
