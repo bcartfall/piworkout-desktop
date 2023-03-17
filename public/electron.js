@@ -17,7 +17,9 @@ app.commandLine.appendSwitch('disable-smooth-scrolling', 'true');
 
 function createWindow() {
   // no menu
-  Menu.setApplicationMenu(null);
+  if (!isDev) {
+    Menu.setApplicationMenu(null);
+  }
 
   // manage win state from store
   const getWinState = () => {
