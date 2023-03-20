@@ -163,16 +163,10 @@ export default function Settings(props) {
           </>}
           <Divider sx={{ m: 2 }} />
           <Typography>
-            An optional Oauth authentication with the YouTube API can be used to view private playlists and submit likes/dislikes. 
-            However, Google API Projects that are not approved require a new token every 7 days so it is recommended to use API Key authentication. 
-            Leave the API Key field blank to use OAuth authentication.
+            Provide a Google API Key or leave the API Key field blank and press the "Connect" button to use OAuth Authentication (recommended).
           </Typography>
           <br />
-          <Typography>
-            For API Key access enter in the key from the Google API credentials page in the field below:
-          </Typography>
-          <br />
-          <TextField fullWidth label="Google API Key" value={settings.googleAPIKey} onChange={(e) => onChange('googleAPIKey', e.target.value)} />
+          <TextField fullWidth required label="Google API Key" value={settings.googleAPIKey} onChange={(e) => onChange('googleAPIKey', e.target.value)} />
           <br /><br />
           {connectElement}
           <Divider sx={{ m: 2 }} />

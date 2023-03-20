@@ -110,6 +110,16 @@ app.on('window-all-closed', () => {
   }
 });
 
+// Support self signed certificates
+// NOTE: This is not safe. If you're using this app over the internet it is 
+// recommended this code is removed and a valid SSL/TLS certificate is used.
+app.on('certificate-error', (event, webContents, url, error, certificate, callback) => {
+  // disable default browser behaviour (stopping)
+  event.preventDefault();
+  // continue
+  callback(true);
+});
+
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();
