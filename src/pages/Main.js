@@ -4,17 +4,48 @@
  * See README.md
  */
 
-import React, { useEffect, useRef, } from 'react';
+import React, { useEffect, useRef, useCallback, } from 'react';
 import { Alert, Button } from '@mui/material';
 import PiVideo from '../components/PiVideo';
 import SettingsIcon from '@mui/icons-material/Settings';
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 
-export default function Main({ controller, videos, failedToConnect }) {
+export default function Main({ controller, videos, setVideos, failedToConnect }) {
   const navigate = useNavigate();
   const sendingApi = useRef(false); // only send connect request once
 
   const [searchParams, ] = useSearchParams();
+
+  //console.log('rendering', videos);
+
+  const moveVideo = useCallback((dragVideo, toIndex, commit = false) => {
+    console.log('moving ', dragVideo.id, toIndex);
+
+    let fromIndex = -1;
+    for (let i in videos) {
+      const video = videos[i];
+      if (video.id === dragVideo.id) {
+        fromIndex = i;
+        break;
+      }
+    }
+    if (fromIndex < 0) {
+      return;
+    }
+
+    videos[fromIndex] = videos[toIndex];
+    videos[toIndex] = dragVideo;
+    setVideos([...videos]);
+
+    if (commit) {
+      controller.send({
+        'namespace': 'videos',
+        'action': 'order',
+        'id': dragVideo.id,
+        'index': toIndex,
+      });
+    }
+  }, [videos, setVideos, controller, ]);
 
   useEffect(() => {
     // check if we need to redirect to settings page
@@ -61,10 +92,10 @@ export default function Main({ controller, videos, failedToConnect }) {
     );
   } else {
     // list of videos
-    videoElement = videos.map((video) => {
+    videoElement = videos.map((video, index) => {
       if (video.title) {
         // must have a title
-        return <PiVideo key={video.id} video={video} controller={controller} />;
+        return <PiVideo key={video.id} index={index} video={video} controller={controller} moveVideo={moveVideo} />;
       }
       return '';
     });

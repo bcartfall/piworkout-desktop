@@ -90,10 +90,10 @@ export default function App(props) {
       <HashRouter>
         <Routes>
           <Route path="/" element={<Layout layout={layout} controller={controller.current} />}>
-            <Route index element={<Main controller={controller.current} connected={connected} videos={videos} failedToConnect={failedToConnect} />} />
+            <Route index element={<Main controller={controller.current} connected={connected} videos={videos} setVideos={setVideos} failedToConnect={failedToConnect} />} />
             <Route path="settings" element={<Settings controller={controller.current} connected={connected} settings={settings} setFailedToConnect={setFailedToConnect} />} />
             <Route path="player/:id" element={<Player controller={controller.current} settings={settings} />} />
-            <Route path="*" element={<Main controller={controller.current} connected={connected} videos={videos} failedToConnect={failedToConnect} />} />
+            <Route path="*" element={<Main controller={controller.current} connected={connected} videos={videos} setVideos={setVideos} failedToConnect={failedToConnect} />} />
           </Route>
         </Routes>
       </HashRouter>

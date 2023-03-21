@@ -166,7 +166,7 @@ export default function Settings(props) {
             Provide a Google API Key or leave the API Key field blank and press the "Connect" button to use OAuth Authentication (recommended).
           </Typography>
           <br />
-          <TextField fullWidth required label="Google API Key" value={settings.googleAPIKey} onChange={(e) => onChange('googleAPIKey', e.target.value)} />
+          <TextField fullWidth label="Google API Key" value={settings.googleAPIKey} onChange={(e) => onChange('googleAPIKey', e.target.value)} />
           <br /><br />
           {connectElement}
           <Divider sx={{ m: 2 }} />
