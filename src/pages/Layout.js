@@ -146,10 +146,10 @@ export default function Layout(props) {
           </Typography>
           <Box sx={{ flexGrow: 0 }}>
             {addUrlDialog !== null && addUrlDialog}
-            <Button variant="outlined" size="small" onClick={onAddUrl}>
+            <IconButton sx={{ mr: 1 }} onClick={onAddUrl}>
               <AddLinkIcon />
-            </Button>
-            <IconButton sx={{ mr: 2 }} onClick={refresh}>
+            </IconButton>
+            <IconButton sx={{ mr: 1 }} onClick={refresh}>
               <ReplayIcon />
             </IconButton>
             <Link to="/settings" className="link">
