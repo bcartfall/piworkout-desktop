@@ -753,6 +753,8 @@ export default React.memo(function Player({ controller, settings, }) {
 
   const handleContextMenu = (event) => {
     event.preventDefault();
+    event.stopPropagation();
+    
     setContextMenu(
       contextMenu === null
         ? {
@@ -881,7 +883,7 @@ export default React.memo(function Player({ controller, settings, }) {
           <VideoList key="videolist" ref={videoListRef} controller={controller} currentVideo={currentVideo} playVideo={playVideo} />
         </Grid>
       </Grid>
-      <VideoContextMenu video={currentVideo} controller={controller} contextMenu={contextMenu} onClose={handleContextClose} />
+      <VideoContextMenu source="player" video={currentVideo} controller={controller} contextMenu={contextMenu} onClose={handleContextClose} />
     </div>
   );
 });
