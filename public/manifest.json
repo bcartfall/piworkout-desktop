@@ -1,6 +1,6 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "piWorkout",
+  "name": "piWorkout Desktop",
   "icons": [
     {
       "src": "favicon.ico",
