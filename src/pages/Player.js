@@ -24,8 +24,10 @@ import defaultChannelImage from '../assets/images/youtube.svg';
 import eStatus from '../enums/VideoStatus';
 import { SPONSORBLOCK_SKIP_CATEGORIES } from '../enums/SponsorBlock'
 import VideoContextMenu from '../components/VideoContextMenu';
+import useController from '../contexts/controller/use';
 
-export default React.memo(function Player({ controller, settings, }) {
+export default React.memo(function Player({ }) {
+  const { state: { settings, }, controller } = useController();
   const navigate = useNavigate();
   const [currentVideo, setCurrentVideo] = useState(null);
   const [rating, setRating] = useState('');
