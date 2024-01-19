@@ -18,6 +18,18 @@ piWorkout Desktop is the Windows, MacOS, and Linux Desktop client to connect to 
 3. Provide the host and port to connect to the piWorkout Server.
 4. Watch videos. 
 
+# Developing (Live Reload)
+
+```bash
+yarn electron:dev
+```
+
+# Building
+
+```bash
+yarn package
+```
+
 # Licence
 
 This project is licensed under GPLv2.

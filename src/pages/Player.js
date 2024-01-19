@@ -66,10 +66,13 @@ export default React.memo(function Player({ }) {
 
   console.log('rendering Player', id);
 
-  const updateNextSkip = useCallback((source, currentTime) => {
+  const updateNextSkip = useCallback((source, currentTime, video = null) => {
     let skipSegment = null;
-    if (currentVideo.sponsorblock) {
-      for (const segment of currentVideo.sponsorblock.segments) {
+    if (!video) {
+      video = currentVideo;
+    }
+    if (video.sponsorblock) {
+      for (const segment of video.sponsorblock.segments) {
         const categoryIndex = SPONSORBLOCK_SKIP_CATEGORIES.indexOf(segment.category);
         if (categoryIndex < 0) {
           continue;
@@ -198,6 +201,7 @@ export default React.memo(function Player({ }) {
       videoId: currentVideo ? currentVideo.id : 0,
       data: controller.getCurrentTime(),
     });
+    console.log('-------------------------- PLAY ----------------', currentVideo);
     
     // determine next segement to skip
     updateNextSkip('play', currentTime);
@@ -334,6 +338,7 @@ export default React.memo(function Player({ }) {
         audioMounted.current = false;
         videoChanging.current = true;
         nextSkip.current = null;
+        shouldRequestInformation.current = true;
         navigate('/player/' + nVideo.id);
       }
     } else if (direction === 'previous') {
@@ -349,6 +354,7 @@ export default React.memo(function Player({ }) {
         audioMounted.current = false;
         videoChanging.current = true;
         nextSkip.current = null;
+        shouldRequestInformation.current = true;
         navigate('/player/' + pVideo.id);
       }
     }
@@ -455,6 +461,7 @@ export default React.memo(function Player({ }) {
               if (json.uuid === uuid) {
                 // set current video will rerender and show updated information
                 setCurrentVideo(json.video);
+                updateNextSkip('playerInformation', json.video.position, json.video);
 
                 // clear callback
                 controller.getClient().onMessageCall(null);
@@ -478,7 +485,7 @@ export default React.memo(function Player({ }) {
         }
       });
     }
-  }, [currentVideo, shouldRequestInformation, controller, id, playing, onPause, ]);
+  }, [currentVideo, shouldRequestInformation, controller, id, playing, onPause, updateNextSkip, ]);
 
   const toggleFullscreen = useCallback((event) => {
     if (event) {
