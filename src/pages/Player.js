@@ -443,6 +443,7 @@ export default React.memo(function Player({ }) {
         if (video.id === id) {
           setCurrentVideo(video);
           controller.setCurrentVideo(video);
+          console.log('------------------------ 5553', shouldRequestInformation.current)
 
           // get more information about video and channel when video id changes
           if (shouldRequestInformation.current) {
