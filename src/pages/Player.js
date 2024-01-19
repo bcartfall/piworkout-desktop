@@ -198,6 +198,7 @@ export default React.memo(function Player({ }) {
       videoId: currentVideo ? currentVideo.id : 0,
       data: controller.getCurrentTime(),
     });
+    console.log('-------------------------- PLAY ----------------', currentVideo);
     
     // determine next segement to skip
     updateNextSkip('play', currentTime);
@@ -334,6 +335,7 @@ export default React.memo(function Player({ }) {
         audioMounted.current = false;
         videoChanging.current = true;
         nextSkip.current = null;
+        shouldRequestInformation.current = true;
         navigate('/player/' + nVideo.id);
       }
     } else if (direction === 'previous') {
@@ -349,6 +351,7 @@ export default React.memo(function Player({ }) {
         audioMounted.current = false;
         videoChanging.current = true;
         nextSkip.current = null;
+        shouldRequestInformation.current = true;
         navigate('/player/' + pVideo.id);
       }
     }
@@ -437,6 +440,7 @@ export default React.memo(function Player({ }) {
         if (video.id === id) {
           setCurrentVideo(video);
           controller.setCurrentVideo(video);
+          console.log('------------------------ 5553', shouldRequestInformation.current)
 
           // get more information about video and channel when video id changes
           if (shouldRequestInformation.current) {
