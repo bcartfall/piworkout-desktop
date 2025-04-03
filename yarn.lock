@@ -4165,7 +4165,7 @@ cosmiconfig@^7.0.0:
 
 cross-env@^7.0.3:
   version "7.0.3"
-  resolved "https://registry.npmjs.org/cross-env/-/cross-env-7.0.3.tgz"
+  resolved "https://registry.yarnpkg.com/cross-env/-/cross-env-7.0.3.tgz#865264b29677dc015ba8418918965dd232fc54cf"
   integrity sha512-+/HKd6EgcQCJGh2PSjZuUitQBQynKor4wrFbRg4DtAgS1aWO+gU52xpH7M9ScGgXSYmAVS9bIJ8EzuaGw0oNAw==
   dependencies:
     cross-spawn "^7.0.1"
@@ -7545,6 +7545,11 @@ klona@^2.0.4, klona@^2.0.5:
   version "2.0.6"
   resolved "https://registry.npmjs.org/klona/-/klona-2.0.6.tgz"
   integrity sha512-dhG34DXATL5hSxJbIexCft8FChFXtmskoZYnoPWjXQuebWYCNkVeV3KkGegCK9CP1oswI/vQibS2GY7Em/sJJA==
+
+koffi@^2.10.1:
+  version "2.10.1"
+  resolved "https://registry.yarnpkg.com/koffi/-/koffi-2.10.1.tgz#4da5ae15aeee05aebdec32ca88b452ab89f4154d"
+  integrity sha512-MjsM1/Xi/p4bjl8hThZ35QpuuWu4MurSDBu+diepnqGMNlUOx/m/hisaw25kr7y4g2GG24TLEOCQgHK3BZvfPg==
 
 language-subtag-registry@~0.3.2:
   version "0.3.22"

@@ -13,6 +13,7 @@ import LiveTvIcon from '@mui/icons-material/LiveTv';
 import SettingsIcon from '@mui/icons-material/Settings';
 import ReplayIcon from '@mui/icons-material/Replay';
 import AddLinkIcon from '@mui/icons-material/AddLink';
+import MoreTimeIcon from '@mui/icons-material/MoreTime';
 
 import LogDialog from '../components/LogDialog';
 import ExerciseToolbar from '../components/ExerciseToolbar';
@@ -86,6 +87,12 @@ export default function Layout(props) {
   // add url link
   const [addUrlDialog, setAddUrlDialog] = useState(null);
 
+  const onLaunchUpdatePosition = useCallback(() => {
+    const videos = controller.getVideos();
+    // launch chrome windows with urls to update position
+    window.electron.app.updateVideoPositions(videos);
+  }, [controller]);
+
   const onAddUrl = () => {
     // show add url dialog
     let url = '';
@@ -158,6 +165,9 @@ export default function Layout(props) {
           </Typography>
           <Box sx={{ flexGrow: 0 }}>
             {addUrlDialog !== null && addUrlDialog}
+            <IconButton sx={{ mr: 1 }} onClick={onLaunchUpdatePosition}>
+              <MoreTimeIcon />
+            </IconButton>
             <IconButton sx={{ mr: 1 }} onClick={onAddUrl}>
               <AddLinkIcon />
             </IconButton>

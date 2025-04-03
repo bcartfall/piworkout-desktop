@@ -16,6 +16,9 @@ contextBridge.exposeInMainWorld('electron', {
     set(property, val) {
       ipcRenderer.send('electron-store-set', property, val);
     },
+    getCookies(url) {
+      return ipcRenderer.sendSync('electron-store-get-cookies', url);
+    }
   },
   shell: {
     openExternal(path) {
@@ -25,6 +28,10 @@ contextBridge.exposeInMainWorld('electron', {
   app: {
     onBeforeClose(callback) {
       appOnBeforeClose = callback;
+    },
+    updateVideoPositions(videos) {
+      // open urls in chrome browser to update youtube position
+      ipcRenderer.send('electron-update-video-positions', videos);
     },
   }
 });
