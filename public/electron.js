@@ -273,7 +273,7 @@ ipcMain.on('electron-update-video-positions', async (event, videos) => {
 
   start = Date.now;
   for (let w of windows) {
-    let x = w.wx + 130, y = w.wy + 335;
+    let x = w.wx + 320, y = w.wy + 384;
     SetActiveWindow(w.hwnd);
     console.log('Clicking at ', x, y);
     SetCursorPos(x, y);
@@ -286,7 +286,7 @@ ipcMain.on('electron-update-video-positions', async (event, videos) => {
 
   // click to pause
   for (let w of windows) {
-    let x = w.wx + 130, y = w.wy + 335;
+    let x = w.wx + 320, y = w.wy + 384;
     SetActiveWindow(w.hwnd);
     console.log('Clicking at ', x, y);
     SetCursorPos(x, y);
