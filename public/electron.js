@@ -294,6 +294,9 @@ ipcMain.on('electron-update-video-positions', async (event, videos) => {
     await delay(500);
   }
 
+  // wait for some time
+  await delay(3000);
+
   // close windows
   for (let w of windows) {
     console.log('Closing window', koffi.address(w.hwnd));
