@@ -10,6 +10,7 @@ const isDev = require('electron-is-dev');
 const Store = require('electron-store');
 const os = require('os');
 const spawn = require('child_process').spawn;
+const fs = require('fs');
 
 // ES6 syntax: import koffi from 'koffi';
 const koffi = require('koffi');
@@ -105,6 +106,9 @@ async function createWindow() {
   );
   session.defaultSession.loadExtension(extPath);
   */
+
+  // start mark-watch application // todo
+  // const proc = cp.spawn('mark-watched.exe');
 }
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling
@@ -125,6 +129,26 @@ ipcMain.on('electron-store-get-cookies', async (event, url) => {
 });
 ipcMain.on('electron-open-external', async (event, path) => {
   shell.openExternal(path);
+});
+let windowYoutube = null;
+ipcMain.on('electron-youtube-login', async (event) => {
+  // open browser to log into youtube
+  if (windowYoutube) {
+    return;
+  }
+  windowYoutube = new BrowserWindow({
+    width: 1024,
+    height: 768,
+    icon: path.join(__dirname, 'logo192.png'),
+  });
+  windowYoutube.loadURL('https://www.youtube.com')
+  windowYoutube.on("close", () => {
+    windowYoutube = null;
+  });
+});
+ipcMain.on('electron-youtube-is-open', async (event) => {
+  // check that browser is open
+  event.returnValue = !!windowYoutube;
 });
 ipcMain.on('electron-update-video-positions', async (event, videos) => {
   console.log('updateVideoPositions()');

@@ -90,6 +90,7 @@ export default React.memo(function Player({ }) {
   }, [nextSkip, currentVideo,]);
 
   const updateVideoPosition = useCallback((video) => {
+    console.log('---------------------- updateVideoPosition(videoId=' + video.id + ')');
     const currentTime = controller.getCurrentTime();
     if (video.duration > 0) {
       // set progress
@@ -307,6 +308,32 @@ export default React.memo(function Player({ }) {
     });
 
     handleStatus('pause');
+
+    // send mark-watched request
+    if (currentVideo) {
+      const mwHost = settings.ytMarkWatchedHost;
+      if (!mwHost) {
+        console.log('No mark-watched host set in settings.');
+        return;
+      }
+      
+      const p = Math.max(0, controller.getCurrentTime() - 3);
+      const url = currentVideo.url + (currentVideo.url.includes('?') ? '&' : '?') + 't=' + Math.round(p);
+      const mwRequest = {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({url,})
+      };
+      console.log(`Marking as watched post=${mwHost}/api/videos/mark-watched, url=${url}`)
+      fetch(`${mwHost}/api/videos/mark-watched`, mwRequest).then(async response => {
+        console.log('mark-watched response=', await response.json())
+      });
+    }
+    
+
     return promise;
   }, [updateVideoPosition, currentVideo, controller, handleStatus]);
 
@@ -443,7 +470,6 @@ export default React.memo(function Player({ }) {
         if (video.id === id) {
           setCurrentVideo(video);
           controller.setCurrentVideo(video);
-          console.log('------------------------ 5553', shouldRequestInformation.current)
 
           // get more information about video and channel when video id changes
           if (shouldRequestInformation.current) {

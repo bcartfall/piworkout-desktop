@@ -33,6 +33,14 @@ contextBridge.exposeInMainWorld('electron', {
       // open urls in chrome browser to update youtube position
       ipcRenderer.send('electron-update-video-positions', videos);
     },
+  },
+  youtube: {
+    login() {
+      return ipcRenderer.send('electron-youtube-login');
+    },
+    isOpen() {
+      return ipcRenderer.sendSync('electron-youtube-is-open');
+    }
   }
 });
 

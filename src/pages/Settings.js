@@ -4,7 +4,7 @@
  * See README.md
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button, Divider, Typography, TextField, Select, Grid, MenuItem, FormControl, InputLabel, Grow, CircularProgress, Alert, FormControlLabel, Checkbox } from '@mui/material';
 import CloudOffIcon from '@mui/icons-material/CloudOff';
@@ -21,6 +21,7 @@ export default function Settings({ }) {
   const [backendHost, setBackendHost] = useState(controller.getLocalSettings('backendHost', 'localhost:5000'));
   const [ssl, setSsl] = useState(controller.getLocalSettings('ssl', true));
   const [error, setError] = useState(null);
+  const [hasYoutubeCookies, setHasYoutubeCookies] = useState(null);
 
   useEffect(() => {
     // update title
@@ -85,6 +86,66 @@ export default function Settings({ }) {
     navigate('/');
   };
 
+  const checkForYoutubeCookies = async () => {
+    // check if user has created youtube cookies for mark-position yet
+    const c = await window.electron.store.getCookies('https://www.youtube.com');
+    if (c && c.length > 0) {
+      let found = false;
+      for (let cookie of c) {
+        if (cookie.name === 'LOGIN_INFO') {
+          found = true;
+          break;
+        }
+      }
+      if (found) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  useEffect(() => {
+    const check = async () => {
+      setHasYoutubeCookies(await checkForYoutubeCookies());
+    };
+    check();
+  }, [setHasYoutubeCookies]);
+
+  const onOpenYoutube = useCallback(async () => {
+    // open youtube and wait for browser close. user is expected to login.
+    window.electron.youtube.login();
+
+    // wait for window to close
+    while (await window.electron.youtube.isOpen()) {
+      await new Promise(r => setTimeout(r, 100));
+    }
+
+    setHasYoutubeCookies(await checkForYoutubeCookies());
+
+    // send cookies
+    await updateCookies();
+  }, [setHasYoutubeCookies]);
+
+  const updateCookies = async () => {
+    const host = settings.ytMarkWatchedHost;
+    if (!host) {
+      console.error('No mark-watched host set in settings.');
+      return;
+    }
+    const c = await window.electron.store.getCookies('https://www.youtube.com');
+    if (!c || c.length === 0) {
+      return;
+    }
+    const response = await fetch(`${host}/api/cookies/update`, {
+      method: 'POST',
+      body: JSON.stringify(c),
+    });
+    console.log('updateCookies() response=', await response.json());
+  };
+
+  const onUpdateCookies = useCallback(async () => {
+    await updateCookies();
+  });
 
   if (connecting) {
     return (
@@ -181,6 +242,17 @@ export default function Settings({ }) {
           <br /><br />
           {connectElement}
           <Divider sx={{ m: 2 }} />
+          <FormControl fullWidth sx={{ mb: 2 }}>
+            <TextField fullWidth required label="yt-marked-watched Host" value={settings.ytMarkWatchedHost} onChange={(e) => onChange('ytMarkWatchedHost', e.target.value)} />
+          </FormControl>
+          {!hasYoutubeCookies && (
+          <Typography sx={{ mb: 2 }}>
+            You do not currently have a youtube session.<br />Log in to Youtube so that the automatic mark-position feature will work.
+          </Typography>
+          )}
+          <Button variant="outlined" size="small" color="secondary" sx={{ ml: 2 }} onClick={onOpenYoutube}>Open Youtube</Button>
+          <Button variant="outlined" size="small" color="secondary" sx={{ ml: 2 }} onClick={onUpdateCookies}>Update yt-mark-watched Cookies</Button>
+          <Divider sx={{ m: 2 }} />
           <Grid container spacing={2}>
             <Grid item xs={6}>
               <TextField fullWidth required label="Audio Delay (ms)" value={settings.audioDelay} onChange={(e) => onChange('audioDelay', e.target.value)} />
@@ -199,10 +271,12 @@ export default function Settings({ }) {
             <Grid item xs={12}>
               <TextField fullWidth required label="Play List URL" value={settings.playlistUrl} onChange={(e) => onChange('playlistUrl', e.target.value)} />
             </Grid>
-            <Grid item xs={12}>
-              <TextField label="YouTube Cookie" multiline rows={4} fullWidth value={settings.youtubeCookie} onChange={(e) => onChange('youtubeCookie', e.target.value)} />
-              <a href="https://github.com/dandv/convert-chrome-cookies-to-netscape-format" target="_blank" rel="noreferrer">How To Copy Cookies</a> | <a href="https://youtube.com" target="_blank" rel="noreferrer">YouTube</a>
-            </Grid>
+            {true == false && (
+              <Grid item xs={12}>
+                <TextField label="YouTube Cookie" multiline rows={4} fullWidth value={settings.youtubeCookie} onChange={(e) => onChange('youtubeCookie', e.target.value)} />
+                <a href="https://github.com/dandv/convert-chrome-cookies-to-netscape-format" target="_blank" rel="noreferrer">How To Copy Cookies</a> | <a href="https://youtube.com" target="_blank" rel="noreferrer">YouTube</a>
+              </Grid>
+            )}
           </Grid>
           <Button type="submit" variant="contained" sx={{ mt: 2 }} fullWidth onClick={onSubmit}><SaveIcon sx={{ mr: 0.5 }} /> Save Settings</Button>
         </form>
