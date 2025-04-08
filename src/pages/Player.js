@@ -328,7 +328,7 @@ export default React.memo(function Player({ }) {
         body: JSON.stringify({url,})
       };
       console.log(`Marking as watched post=${mwHost}/api/videos/mark-watched, url=${url}`)
-      fetch(`${mwHost}/api/videos/mark-watched`, mwRequest).then(async response => {
+      fetch(`http://${mwHost}/api/videos/mark-watched`, mwRequest).then(async response => {
         console.log('mark-watched response=', await response.json())
       });
     }

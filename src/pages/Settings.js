@@ -136,7 +136,7 @@ export default function Settings({ }) {
     if (!c || c.length === 0) {
       return;
     }
-    const response = await fetch(`${host}/api/cookies/update`, {
+    const response = await fetch(`http://${host}/api/cookies/update`, {
       method: 'POST',
       body: JSON.stringify(c),
     });
