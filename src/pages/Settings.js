@@ -6,15 +6,17 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Button, Divider, Typography, TextField, Select, Grid, MenuItem, FormControl, InputLabel, Grow, CircularProgress, Alert, FormControlLabel, Checkbox } from '@mui/material';
+import { Box, Chip, Button, Divider, Typography, TextField, Select, Grid, MenuItem, FormControl, InputLabel, Grow, CircularProgress, Alert, FormControlLabel, Checkbox } from '@mui/material';
 import CloudOffIcon from '@mui/icons-material/CloudOff';
 import SaveIcon from '@mui/icons-material/Save';
 import YouTubeIcon from '@mui/icons-material/YouTube';
 import useController from '../contexts/controller/use';
 
+const delay = ms => new Promise(res => setTimeout(res, ms));
+
 export default function Settings({ }) {
   const navigate = useNavigate();
-  const { state: { settings, connected, }, actions: { setFailedToConnect, }, controller } = useController();
+  const { state: { settings, versions, connected, }, actions: { setFailedToConnect, }, controller } = useController();
 
   const [hasBackendFailure, setHasBackendFailure] = useState(controller.getClient().getHasBackendFailure());
   const [connecting, setConnecting] = useState(false);
@@ -145,6 +147,18 @@ export default function Settings({ }) {
 
   const onUpdateCookies = useCallback(async () => {
     await updateCookies();
+  });
+
+  const onUpdateYtDlp = useCallback(async () => {
+    controller.snack({
+      message: 'Updating yt-dlp.',
+    });
+
+    controller.send({
+      'namespace': 'settings',
+      'method': 'GET',
+      'action': 'update-yt-dlp',
+    });
   });
 
   if (connecting) {
@@ -280,6 +294,17 @@ export default function Settings({ }) {
           </Grid>
           <Button type="submit" variant="contained" sx={{ mt: 2 }} fullWidth onClick={onSubmit}><SaveIcon sx={{ mr: 0.5 }} /> Save Settings</Button>
         </form>
+        <div className="versions">
+          <Divider sx={{ mt: 4, mb: 4 }} />
+
+          <Box>
+            <Chip label={ 'piWorkout Server ' + versions.piworkoutServer } variant="outlined" />
+            <Chip sx={{ ml: 1 }} label={ 'yt-dlp ' + versions.ytDlp } variant="outlined" />
+          </Box>
+          <Box sx={{ mt: 2 }}>
+            <Button variant="outlined" size="small" color="secondary" onClick={onUpdateYtDlp}>Update yt-dlp</Button>
+          </Box>
+        </div>
       </div>
     </Grow>
   );
