@@ -65,6 +65,7 @@ export default function Settings({ }) {
           controller.setLocalSettings('ssl', ssl);
         }).catch((response) => {
           // failed to connect
+          console.log(response);
           setConnecting(false);
           setHasBackendFailure(true);
           setError('Error connecting to web socket at ' + backendHost + '.');
@@ -186,7 +187,7 @@ export default function Settings({ }) {
             <Divider sx={{ m: 2 }} />
             <Grid container spacing={2}>
               <Grid item xs={10}>
-                <TextField fullWidth required label="Backend Host" value={backendHost} onChange={(e) => setBackendHost(e.target.value)} />
+                <TextField fullWidth required label="Backend Host" value={backendHost ? backendHost : ''} onChange={(e) => setBackendHost(e.target.value)} />
               </Grid>
               <Grid item xs={2}>
                 <FormControlLabel control={<Checkbox checked={ssl} onChange={(event) => {setSsl(event.target.checked);}} />} label="SSL" />

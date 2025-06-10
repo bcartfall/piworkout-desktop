@@ -63,7 +63,7 @@ export default function ControllerProvider({ children, isElectron, failedToConne
 
   const value = {
     state: { routines, currentRoutine, currentExercise, layout, videos, settings, versions, connected, },
-    actions: { setRoutines, setCurrentRoutine, setCurrentExercise, setLayout, setVideos, setSettings, setConnected, },
+    actions: { setRoutines, setCurrentRoutine, setCurrentExercise, setLayout, setVideos, setSettings, setConnected, setFailedToConnect, },
     controller: controller.current,
   };
 
