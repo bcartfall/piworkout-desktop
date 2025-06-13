@@ -57,12 +57,13 @@ async function createWindow() {
   };
 
   // Create the browser window.
-  const winState = getWinState();
+  // const winState = getWinState(); // let windows handle position
   const win = new BrowserWindow({
-    x: winState.x,
-    y: winState.y,
-    width: winState.width,
-    height: winState.height,
+    //x: winState.x, 
+    //y: winState.y,
+    //width: winState.width,
+    //height: winState.height,
+    show: false,
     backgroundColor: '#282c34',
     icon: path.join(__dirname, 'logo192.png'),
     show: false,
@@ -72,11 +73,13 @@ async function createWindow() {
       preload: path.resolve(__dirname, "preload.js"),
     },
   });
+  win.maximize();
+  win.show();
 
   // set win state in setore
-  win.on('resize', setWinState);
-  win.on('move', setWinState);
-  win.on('close', setWinState);
+  //win.on('resize', setWinState);
+  //win.on('move', setWinState);
+  //win.on('close', setWinState);
 
   win.once('ready-to-show', () => {
     win.show();
