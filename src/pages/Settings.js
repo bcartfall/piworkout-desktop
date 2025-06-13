@@ -135,13 +135,17 @@ export default function Settings({ }) {
       console.error('No mark-watched host set in settings.');
       return;
     }
-    const c = await window.electron.store.getCookies('https://www.youtube.com');
-    if (!c || c.length === 0) {
+
+    const cookies = {
+      'https://www.youtube.com': await window.electron.store.getCookies('https://www.youtube.com'),
+      'https://accounts.youtube.com': await window.electron.store.getCookies('https://accounts.youtube.com'),
+    };
+    if (!cookies['https://www.youtube.com'] || cookies['https://www.youtube.com'].length === 0) {
       return;
     }
     const response = await fetch(`http://${host}/api/cookies/update`, {
       method: 'POST',
-      body: JSON.stringify(c),
+      body: JSON.stringify(cookies),
     });
     console.log('updateCookies() response=', await response.json());
   };
