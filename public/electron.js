@@ -155,9 +155,12 @@ ipcMain.on('electron-youtube-is-open', async (event) => {
 });
 ipcMain.on('electron-update-video-positions', async (event, videos) => {
   console.log('updateVideoPositions()');
-  const app = path.join('C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe');
+  const chromeApp = path.join('C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe');
+  //const firefoxApp = path.join('C:\\Program Files\\Mozilla Firefox\\firefox.exe');
 
   const SetWindowPos = libuser32.func('__stdcall', 'SetWindowPos', 'bool', ['HWND', 'long', 'int', 'int', 'int', 'int', 'uint']);
+  const MoveWindow = libuser32.func('__stdcall', 'MoveWindow', 'bool', ['HWND', 'int', 'int', 'int', 'int', 'bool']);
+  const ShowWindow = libuser32.func('__stdcall', 'ShowWindow', 'bool', ['HWND', 'int']);
   const FindWindowEx = libuser32.func('HWND __stdcall FindWindowExW(HWND hWndParent, HWND hWndChildAfter, const char16_t *lpszClass, const char16_t *lpszWindow)');
   const GetWindowThreadProcessId = libuser32.func('DWORD __stdcall GetWindowThreadProcessId(HWND hWnd, _Out_ DWORD *lpdwProcessId)');
   const GetWindowText = libuser32.func('int __stdcall GetWindowTextA(HWND hWnd, _Out_ uint8_t *lpString, int nMaxCount)');
@@ -168,7 +171,7 @@ ipcMain.on('electron-update-video-positions', async (event, videos) => {
   const GetForegroundWindow = libuser32.func('__stdcall', 'GetForegroundWindow', 'HWND', []);
 
   let wx = 0, wy = 0;
-  const ww = 640, wh = 480;
+  const ww = 800, wh = 640;
   const primaryDisplay = screen.getPrimaryDisplay();
   const sw = primaryDisplay.workAreaSize.width;
 
@@ -243,7 +246,36 @@ ipcMain.on('electron-update-video-positions', async (event, videos) => {
 
     let bList = getAllChrome();
 
-    let r = spawn(app, [url, '--new-window', '--mute-audio', '--autoplay-policy=no-user-gesture-required']);
+    let r = spawn(chromeApp, [url, '--new-window', '--mute-audio', '--autoplay-policy=no-user-gesture-required']);
+    //let r = spawn(chromeApp, ['--new-window', '--app="data:text/html,<html><body><script>window.moveTo(580,240);window.resizeTo(800,600);window.location=\'http://www.test.de\';</script></body></html>"', '--autoplay-policy=no-user-gesture-required']);
+
+    /*
+    // get output of process
+    r.stdout.setEncoding('utf8');
+    r.stdout.on('data', function(data) {
+        //Here is where the output goes
+
+        console.log('stdout: ' + data);
+
+        data=data.toString();
+        console.log(data);
+    });
+
+    r.stderr.setEncoding('utf8');
+    r.stderr.on('data', function(data) {
+        //Here is where the error output goes
+
+        console.log('stderr: ' + data);
+
+        data=data.toString();
+        console.log(data);
+    });
+    r.on('close', function(code) {
+        //Here you can get the exit code of the script
+        console.log('closing code: ' + code);
+    });
+    */
+
     console.log(`Launching chrome ${url}, pid=${r.pid}`);
 
     // wait for a new pid to spawn
@@ -274,10 +306,16 @@ ipcMain.on('electron-update-video-positions', async (event, videos) => {
     if (!nItem) {
       continue;
     }
-    console.log('new window = ' + nItem.title, nItem.pid);
+    console.log('new window = ' + nItem.title, 'pid=' + nItem.pid);
 
-    console.log(`Moving ${nItem.title} to ${wx},${wy}`);
+    console.log(`Moving title=${nItem.title} to ${wx},${wy}`);
+
+    await delay(250);
+    ShowWindow(nItem.hwnd, 1); // SW_SHOWNORMAL
+
+    await delay(250);
     SetWindowPos(nItem.hwnd, 0, wx, wy, ww, wh, 0x4000 | 0x0020 | 0x0020 | 0x0040);
+
     windows.push({
       hwnd: nItem.hwnd,
       wx,
@@ -329,6 +367,7 @@ ipcMain.on('electron-update-video-positions', async (event, videos) => {
     console.log('Closing window', koffi.address(w.hwnd));
     SendMessageW(w.hwnd, WM_CLOSE, 0, 0);
   }
+  await delay(500);
 
   // unmute
   SendMessageW(hwnd, WM_APPCOMMAND, koffi.address(hwnd), APPCOMMAND_VOLUME_MUTE);
