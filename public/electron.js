@@ -159,7 +159,7 @@ ipcMain.on('electron-update-video-positions', async (event, videos) => {
   //const firefoxApp = path.join('C:\\Program Files\\Mozilla Firefox\\firefox.exe');
 
   const SetWindowPos = libuser32.func('__stdcall', 'SetWindowPos', 'bool', ['HWND', 'long', 'int', 'int', 'int', 'int', 'uint']);
-  const MoveWindow = libuser32.func('__stdcall', 'MoveWindow', 'bool', ['HWND', 'int', 'int', 'int', 'int', 'bool']);
+  //const MoveWindow = libuser32.func('__stdcall', 'MoveWindow', 'bool', ['HWND', 'int', 'int', 'int', 'int', 'bool']);
   const ShowWindow = libuser32.func('__stdcall', 'ShowWindow', 'bool', ['HWND', 'int']);
   const FindWindowEx = libuser32.func('HWND __stdcall FindWindowExW(HWND hWndParent, HWND hWndChildAfter, const char16_t *lpszClass, const char16_t *lpszWindow)');
   const GetWindowThreadProcessId = libuser32.func('DWORD __stdcall GetWindowThreadProcessId(HWND hWnd, _Out_ DWORD *lpdwProcessId)');
@@ -173,7 +173,9 @@ ipcMain.on('electron-update-video-positions', async (event, videos) => {
   let wx = 0, wy = 0;
   const ww = 800, wh = 640;
   const primaryDisplay = screen.getPrimaryDisplay();
-  const sw = primaryDisplay.workAreaSize.width;
+  const sw = primaryDisplay.workAreaSize.width * primaryDisplay.scaleFactor,
+    sh = primaryDisplay.workAreaSize.height * primaryDisplay.scaleFactor;
+  console.log('Total screen area = ' + sw  + 'x' + sh);
 
   let windows = [];
 
@@ -328,13 +330,17 @@ ipcMain.on('electron-update-video-positions', async (event, videos) => {
       wx = 0;
       wy += wh;
     }
+    if (wy + wh > sh) {
+      console.log('New window higher than screen height.');
+      break;
+    }
     if (i === 0) {
       start = Date.now;
     }
   }
 
   // wait for youtube to finish loading
-  await delay(3000);
+  await delay(6000);
 
   start = Date.now;
   for (let w of windows) {
