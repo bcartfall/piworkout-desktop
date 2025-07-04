@@ -193,10 +193,7 @@ ipcMain.on('electron-update-video-positions', async (event, videos) => {
     if (video.position <= 1) {
       continue;
     }
-    let position = video.position;
-    if (position > video.duration - 5) {
-      position = video.duration - 5;
-    }
+    let position = Math.max(0, video.position - 6);
     let url = video.url + (video.url.includes('?') ? '&' : '?') + 't=' + Math.round(position);
 
     const getAllChrome = () => {
@@ -248,7 +245,7 @@ ipcMain.on('electron-update-video-positions', async (event, videos) => {
 
     let bList = getAllChrome();
 
-    let r = spawn(chromeApp, [url, '--new-window', '--mute-audio', '--autoplay-policy=no-user-gesture-required']);
+    let r = spawn(chromeApp, [url, '--new-window', '--mute-audio']); // '--autoplay-policy=no-user-gesture-required'
     //let r = spawn(chromeApp, ['--new-window', '--app="data:text/html,<html><body><script>window.moveTo(580,240);window.resizeTo(800,600);window.location=\'http://www.test.de\';</script></body></html>"', '--autoplay-policy=no-user-gesture-required']);
 
     /*
@@ -342,6 +339,7 @@ ipcMain.on('electron-update-video-positions', async (event, videos) => {
   // wait for youtube to finish loading
   await delay(6000);
 
+  // click on start
   start = Date.now;
   for (let w of windows) {
     let x = w.wx + 320, y = w.wy + 384;
@@ -353,7 +351,7 @@ ipcMain.on('electron-update-video-positions', async (event, videos) => {
   }
 
   // play for some time
-  await delay(1000);
+  await delay(3000);
 
   // click to pause
   for (let w of windows) {
