@@ -193,7 +193,7 @@ ipcMain.on('electron-update-video-positions', async (event, videos) => {
     if (video.position <= 1) {
       continue;
     }
-    let position = Math.max(0, video.position - 6);
+    let position = Math.max(0, video.position - 30);
     let url = video.url + (video.url.includes('?') ? '&' : '?') + 't=' + Math.round(position);
 
     const getAllChrome = () => {
@@ -337,7 +337,7 @@ ipcMain.on('electron-update-video-positions', async (event, videos) => {
   }
 
   // wait for youtube to finish loading
-  await delay(6000);
+  await delay(15000);
 
   // click on start
   start = Date.now;
