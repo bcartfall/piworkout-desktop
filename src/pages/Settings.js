@@ -40,6 +40,7 @@ export default function Settings({ }) {
     console.log('onSubmit');
     if (!hasBackendFailure) {
       // send to server
+      console.log('sending settings to server', settings);
       controller.send({
         'namespace': 'settings',
         'method': 'PUT',
@@ -288,7 +289,10 @@ export default function Settings({ }) {
               </FormControl>
             </Grid>
             <Grid item xs={12}>
-              <TextField fullWidth required label="Play List URL" value={settings.playlistUrl} onChange={(e) => onChange('playlistUrl', e.target.value)} />
+              <TextField fullWidth required label="Playlist URL" value={settings.playlistUrl} onChange={(e) => onChange('playlistUrl', e.target.value)} />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField fullWidth required label="yt-dlp Additional Arguments" value={settings.ytDlpArgv} onChange={(e) => onChange('ytDlpArgv', e.target.value)} />
             </Grid>
             {true == false && (
               <Grid item xs={12}>
