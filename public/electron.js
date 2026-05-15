@@ -4,6 +4,7 @@
  * See README.md
  */
 
+const zlib = require('zlib');
 const path = require('path');
 const { app, BrowserWindow, ipcMain, ipcRenderer, shell, Menu, session, screen, } = require('electron');
 const isDev = require('electron-is-dev');
@@ -20,6 +21,7 @@ const HWND = koffi.alias('HWND', HANDLE);
 
 // Load the shared library
 const libuser32 = koffi.load('user32.dll');
+const libgdi32 = koffi.load('gdi32.dll');
 const delay = ms => new Promise(res => setTimeout(res, ms));
 const MOUSEEVENTF_LEFTDOWN = 0x0002,
   MOUSEEVENTF_LEFTUP = 0x0004,
@@ -33,6 +35,8 @@ const store = new Store();
 
 // disable smooth scrolling
 app.commandLine.appendSwitch('disable-smooth-scrolling', 'true');
+
+const projectDir = app.getPath('userData');
 
 async function createWindow() {
   // no menu
@@ -169,12 +173,158 @@ ipcMain.on('electron-update-video-positions', async (event, videos) => {
   const SetActiveWindow = libuser32.func('__stdcall', 'SetActiveWindow', 'HWND', ['HWND']);
   const SendMessageW = libuser32.func('SendMessageW', 'intptr', ['HWND', 'int', 'uint64', 'int64']);
   const GetForegroundWindow = libuser32.func('__stdcall', 'GetForegroundWindow', 'HWND', []);
+  const GetDC = libuser32.func('GetDC', 'HWND', ['HWND']);
+  const ReleaseDC = libuser32.func('ReleaseDC', 'int', ['HWND', 'HWND']);
+  const GetSystemMetrics = libuser32.func('int __stdcall GetSystemMetrics(int nIndex)');
+  const CreateCompatibleDC = libgdi32.func('HWND __stdcall CreateCompatibleDC(HWND hDC)');
+  const CreateCompatibleBitmap = libgdi32.func('HWND __stdcall CreateCompatibleBitmap(HWND hDC, int cx, int cy)');
+  const SelectObject = libgdi32.func('HWND __stdcall SelectObject(HWND hDC, HWND h)');
+  const BitBlt = libgdi32.func('bool __stdcall BitBlt(HWND hdcDest, int nXDest, int nYDest, int nWidth, int nHeight, HWND hdcSrc, int nXSrc, int nYSrc, uint32 dwRop)');
+  const GetDIBits = libgdi32.func('int __stdcall GetDIBits(HWND hdc, HWND hbmp, uint uStartScan, uint cScanLines, HWND lpvBits, HWND lpbi, uint uUsage)');
+  const DeleteObject = libgdi32.func('bool __stdcall DeleteObject(HWND ho)');
+  const DeleteDC = libgdi32.func('bool __stdcall DeleteDC(HWND hdc)');
+
+  function getPixelColor(pixelBuffer, x, y, width, height) {
+    const targetX = x;
+    const targetY = y;
+
+    // Ensure the coordinates are within bounds
+    if (targetX >= 0 && targetX < width && targetY >= 0 && targetY < height) {
+
+      // Calculate the buffer offset for the target pixel
+      const offset = (targetY * width + targetX) * 4;
+
+      // Read the BGRA values from the buffer
+      const blue = pixelBuffer.readUInt8(offset);
+      const green = pixelBuffer.readUInt8(offset + 1);
+      const red = pixelBuffer.readUInt8(offset + 2);
+      const alpha = pixelBuffer.readUInt8(offset + 3); // Usually 255 or 0 depending on the source Windows DC
+      return [red, green, blue, alpha];
+    }
+    return [0, 0, 0, 0];
+  }
+
+  function captureWindowBitmap(w, savePng) {
+    const physicalX = w.wx; //Math.round(w.wx * scale);
+    const physicalY = w.wy; //Math.round(w.wy * scale);
+    const physicalW = w.ww; //Math.round(w.ww * scale);
+    const physicalH = w.wh; //Math.round(w.wh * scale);
+
+    // Setup Device Contexts
+    const hdcScreen = GetDC(null);
+    const hdcMem = CreateCompatibleDC(hdcScreen);
+    const hBitmap = CreateCompatibleBitmap(hdcScreen, physicalW, physicalH);
+
+    // Select the bitmap into our memory DC
+    const hOldObj = SelectObject(hdcMem, hBitmap);
+
+    // BitBlt copies the screen data into our memory bitmap
+    const SRCCOPY = 0x00CC0020;
+    BitBlt(hdcMem, 0, 0, physicalW, physicalH, hdcScreen, physicalX, physicalY, SRCCOPY);
+
+    // 4. Set up the Bitmap Info Header structure (40 bytes)
+    const biHeader = Buffer.alloc(40);
+    biHeader.writeUInt32LE(40, 0);        // biSize
+    biHeader.writeInt32LE(physicalW, 4);      // biWidth
+    biHeader.writeInt32LE(-physicalH, 8);    // biHeight (Negative for top-down BMP format)
+    biHeader.writeUInt16LE(1, 12);        // biPlanes
+    biHeader.writeUInt16LE(32, 14);       // biBitCount (32-bit RGBA)
+    biHeader.writeUInt32LE(0, 16);        // biCompression (BI_RGB = no compression)
+
+    // Allocate buffer for raw pixel data (Width * Height * 4 bytes per pixel)
+    const pixelBufferSize = physicalW * physicalH * 4;
+    const pixelBuffer = Buffer.alloc(pixelBufferSize);
+
+    // Extract raw bits from the Windows bitmap object into our Node.js buffer
+    const DIB_RGB_COLORS = 0;
+    GetDIBits(hdcMem, hBitmap, 0, physicalH, pixelBuffer, biHeader, DIB_RGB_COLORS);
+
+    // Cleanup Windows memory hooks immediately to prevent leaks
+    SelectObject(hdcMem, hOldObj);
+    DeleteObject(hBitmap);
+    DeleteDC(hdcMem);
+    ReleaseDC(null, hdcScreen);
+
+    if (savePng) {
+      // Windows GDI returns pixels in BGRA order — swap to RGBA for PNG
+      const rgbaBuffer = Buffer.alloc(pixelBufferSize);
+      for (let i = 0; i < pixelBufferSize; i += 4) {
+        rgbaBuffer[i] = pixelBuffer[i + 2]; // R ← B
+        rgbaBuffer[i + 1] = pixelBuffer[i + 1]; // G ← G
+        rgbaBuffer[i + 2] = pixelBuffer[i];     // B ← R
+        rgbaBuffer[i + 3] = pixelBuffer[i + 3]; // A ← A
+      }
+
+      // PNG filter byte (0 = None) prepended to each row
+      const stride = physicalW * 4;
+      const filtered = Buffer.alloc((stride + 1) * physicalH);
+      for (let row = 0; row < physicalH; row++) {
+        filtered[row * (stride + 1)] = 0; // filter type: None
+        rgbaBuffer.copy(filtered, row * (stride + 1) + 1, row * stride, (row + 1) * stride);
+      }
+
+      const compressed = zlib.deflateSync(filtered, { level: 6 });
+
+      function pngChunk(type, data) {
+        const buf = Buffer.alloc(4 + 4 + data.length + 4);
+        buf.writeUInt32BE(data.length, 0);
+        buf.write(type, 4, 'ascii');
+        data.copy(buf, 8);
+        // CRC covers type + data
+        const crc = crc32(buf.slice(4, 8 + data.length));
+        buf.writeUInt32BE(crc, 8 + data.length);
+        return buf;
+      }
+
+      // CRC-32 implementation
+      const crcTable = (() => {
+        const t = new Uint32Array(256);
+        for (let i = 0; i < 256; i++) {
+          let c = i;
+          for (let k = 0; k < 8; k++) c = (c & 1) ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;
+          t[i] = c;
+        }
+        return t;
+      })();
+
+      function crc32(buf) {
+        let crc = 0xFFFFFFFF;
+        for (let i = 0; i < buf.length; i++) crc = crcTable[(crc ^ buf[i]) & 0xFF] ^ (crc >>> 8);
+        return (crc ^ 0xFFFFFFFF) >>> 0;
+      }
+
+      // IHDR: width, height, bit depth, color type (2=RGB, 6=RGBA), compression, filter, interlace
+      const ihdr = Buffer.alloc(13);
+      ihdr.writeUInt32BE(physicalW, 0);
+      ihdr.writeUInt32BE(physicalH, 4);
+      ihdr[8] = 8; // bit depth
+      ihdr[9] = 6; // color type: RGBA
+      ihdr[10] = 0; // compression
+      ihdr[11] = 0; // filter
+      ihdr[12] = 0; // interlace
+
+      const png = Buffer.concat([
+        Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), // PNG signature
+        pngChunk('IHDR', ihdr),
+        pngChunk('IDAT', compressed),
+        pngChunk('IEND', Buffer.alloc(0)),
+      ]);
+
+      const fileName = `video-positions-${windowIndex}-${captureIndex}.png`;
+      const fullPath = path.join(projectDir, fileName);
+      fs.writeFileSync(fullPath, png);
+      console.log(`Saved PNG to ${fullPath}`);
+    }
+
+    return { pixelBuffer, width: physicalW, height: physicalH };
+  }
 
   let wx = 0, wy = 0;
-  const ww = 800, wh = 640;
+  const ww = 800, wh = 600;
   const primaryDisplay = screen.getPrimaryDisplay();
-  const sw = primaryDisplay.workAreaSize.width * primaryDisplay.scaleFactor,
-    sh = primaryDisplay.workAreaSize.height * primaryDisplay.scaleFactor;
+  const scale = primaryDisplay.scaleFactor;
+  const sw = primaryDisplay.workAreaSize.width * scale,
+    sh = primaryDisplay.workAreaSize.height * scale;
   console.log('Total screen area = ' + sw  + 'x' + sh);
 
   let windows = [];
@@ -319,6 +469,11 @@ ipcMain.on('electron-update-video-positions', async (event, videos) => {
       hwnd: nItem.hwnd,
       wx,
       wy,
+      ww,
+      wh,
+      isReady: false, // video has loaded and is ready to click to play
+      isPlaying: false, // video is playing
+      offsetX: -1,
     });
 
     wx += ww;
@@ -336,10 +491,71 @@ ipcMain.on('electron-update-video-positions', async (event, videos) => {
     }
   }
 
+  // await delay(1000);
+
+  // keep track of when it finished setting up windows
+  let now = Date.now(); // ms timestamp
+
   // wait for youtube to finish loading
-  await delay(15000);
+  let windowIndex = 0, captureIndex = 0;
+  while (captureIndex < 30) { // wait up to 30s for videos to be ready
+    windowIndex = -1;
+    for (let w of windows) {
+      windowIndex++;
+
+      if (w.isReady) {
+        continue; // already ready
+      }
+      const { pixelBuffer, width, height } = captureWindowBitmap(w, true);
+
+      // get first white pixel to define where window is located. sometimes it's offset more (for reasons unknown)
+      if (w.offsetX === -1) {
+        let checkX = 0, offsetX = 0;
+        while (checkX < width) {
+          const rgba = getPixelColor(pixelBuffer, checkX, 262, width, height);
+          if (rgba[0] === 255 && rgba[1] === 255 && rgba[2] === 255) {
+            console.log(`Found offsetX=${checkX}, windowIndex=${windowIndex}, captureIndex=${captureIndex}`)
+            offsetX = checkX;
+            w.offsetX = offsetX;
+            break;
+          }
+          checkX++; 
+        }
+      }
+
+      const headerRGBA = getPixelColor(pixelBuffer, 130 + w.offsetX, 262, width, height);
+      console.log(`Getting header pixel at (${130 + w.offsetX},262), color=${headerRGBA}, windowIndex=${windowIndex}, captureIndex=${captureIndex}`);
+
+      const playButtonRGBA = getPixelColor(pixelBuffer, 420 + w.offsetX, 421, width, height);
+      console.log(`Getting play button pixel at (${420 + w.offsetX},421), color=${playButtonRGBA}, windowIndex=${windowIndex}, captureIndex=${captureIndex}`);
+
+      if (
+        (
+          headerRGBA[0] === 255
+          && headerRGBA[1] === 0
+          && headerRGBA[2] === 51
+        ) && (
+          playButtonRGBA[0] === 255
+          && playButtonRGBA[1] === 255
+          && playButtonRGBA[2] === 255
+        )
+      ) {
+        w.isReady = true;
+        continue;
+      }
+    }
+
+    if (windows.every(w => w.isReady)) {
+      // all windows are ready
+      break;
+    };
+    await delay(1000);
+
+    captureIndex++;
+  }
 
   // click on start
+  console.log('Clicking on all windows to start playing');
   start = Date.now;
   for (let w of windows) {
     let x = w.wx + 320, y = w.wy + 384;
@@ -350,10 +566,47 @@ ipcMain.on('electron-update-video-positions', async (event, videos) => {
     await delay(500);
   }
 
-  // play for some time
-  await delay(3000);
+  // wait for videos to play
+  console.log('Waiting for all windows to start playing');
+  captureIndex = 0;
+  while (captureIndex < 120) { // wait up to 120s for videos to play
+    windowIndex = -1;
+    for (let w of windows) {
+      windowIndex++;
+
+      if (w.isPlaying) {
+        continue; // already playing
+      }
+      const { pixelBuffer, width, height } = captureWindowBitmap(w, true);
+
+      const playButtonRGBA = getPixelColor(pixelBuffer, 420 + w.offsetX, 421, width, height);
+      console.log(`Getting play button pixel at (${420 + w.offsetX},421), color=${playButtonRGBA}, windowIndex=${windowIndex}, captureIndex=${captureIndex}`);
+
+      if (
+        playButtonRGBA[0] !== 255
+        && playButtonRGBA[1] !== 255
+        && playButtonRGBA[2] !== 255
+      ) {
+        // not white
+        w.isPlaying = true;
+        continue;
+      }
+    }
+
+    if (windows.every(w => w.isPlaying)) {
+      // all windows are playing
+      break;
+    };
+    await delay(1000);
+
+    captureIndex++;
+  }
+
+  console.log('Playing for some time.');
+  await delay(10000); // play for some time
 
   // click to pause
+  console.log('Clicking on all windows to pause');
   for (let w of windows) {
     let x = w.wx + 320, y = w.wy + 384;
     SetActiveWindow(w.hwnd);
