@@ -204,7 +204,7 @@ ipcMain.on('electron-update-video-positions', async (event, videos) => {
     return [0, 0, 0, 0];
   }
 
-  function captureWindowBitmap(w, savePng) {
+  function captureWindowBitmap(w, savePng, captureIndex) {
     const physicalX = w.wx; //Math.round(w.wx * scale);
     const physicalY = w.wy; //Math.round(w.wy * scale);
     const physicalW = w.ww; //Math.round(w.ww * scale);
@@ -310,7 +310,7 @@ ipcMain.on('electron-update-video-positions', async (event, videos) => {
         pngChunk('IEND', Buffer.alloc(0)),
       ]);
 
-      const fileName = `video-positions-${windowIndex}-${captureIndex}.png`;
+      const fileName = `video-positions-${w.index}-${captureIndex}.png`;
       const fullPath = path.join(projectDir, fileName);
       fs.writeFileSync(fullPath, png);
       console.log(`Saved PNG to ${fullPath}`);
@@ -319,31 +319,24 @@ ipcMain.on('electron-update-video-positions', async (event, videos) => {
     return { pixelBuffer, width: physicalW, height: physicalH };
   }
 
-  let wx = 0, wy = 0;
   const ww = 800, wh = 600;
   const primaryDisplay = screen.getPrimaryDisplay();
   const scale = primaryDisplay.scaleFactor;
   const sw = primaryDisplay.workAreaSize.width * scale,
     sh = primaryDisplay.workAreaSize.height * scale;
-  console.log('Total screen area = ' + sw  + 'x' + sh);
-
-  let windows = [];
+  const numberToLoad = 2;
+  console.log('Total screen area = ' + sw + 'x' + sh);
 
   // mute audio
   const hwnd = GetForegroundWindow();
   SendMessageW(hwnd, WM_APPCOMMAND, koffi.address(hwnd), APPCOMMAND_VOLUME_MUTE);
 
-  let start = 0;
-  for (let i in videos) {
-    const video = videos[i];
-    
-    if (video.source !== 'youtube') {
-      continue;
-    }
-    if (video.position <= 1) {
-      continue;
-    }
+  let wx = 0, wy = 0;
+  let windows = [];
+
+  async function createWindow(video, videoIndex) {
     let position = Math.max(0, video.position - 30);
+    
     let url = video.url + (video.url.includes('?') ? '&' : '?') + 't=' + Math.round(position);
 
     const getAllChrome = () => {
@@ -354,7 +347,7 @@ ipcMain.on('electron-update-video-positions', async (event, videos) => {
         if (!hwnd) {
           break;
         }
-  
+
         // Get PID
         let pid;
         {
@@ -364,7 +357,7 @@ ipcMain.on('electron-update-video-positions', async (event, videos) => {
             // Maybe the process ended in-between?
             continue;
           }
-  
+
           pid = ptr[0];
         }
 
@@ -387,7 +380,7 @@ ipcMain.on('electron-update-video-positions', async (event, videos) => {
           pid,
           title,
         });
-      
+
       }
 
       return list;
@@ -453,10 +446,9 @@ ipcMain.on('electron-update-video-positions', async (event, videos) => {
       }
     }
     if (!nItem) {
-      continue;
+      return null;
     }
     console.log('new window = ' + nItem.title, 'pid=' + nItem.pid);
-
     console.log(`Moving title=${nItem.title} to ${wx},${wy}`);
 
     await delay(250);
@@ -465,8 +457,9 @@ ipcMain.on('electron-update-video-positions', async (event, videos) => {
     await delay(250);
     SetWindowPos(nItem.hwnd, 0, wx, wy, ww, wh, 0x4000 | 0x0020 | 0x0020 | 0x0040);
 
-    windows.push({
+    const wnd = {
       hwnd: nItem.hwnd,
+      index: videoIndex,
       wx,
       wy,
       ww,
@@ -474,7 +467,11 @@ ipcMain.on('electron-update-video-positions', async (event, videos) => {
       isReady: false, // video has loaded and is ready to click to play
       isPlaying: false, // video is playing
       offsetX: -1,
-    });
+      startedPlayingTime: 0, // timestamp for when detected that video was playing (ms)
+      duration: video.duration * 1000, // ms
+      position: position * 1000, // ms
+    };
+    windows.push(wnd);
 
     wx += ww;
     if (wx + ww > sw) {
@@ -484,122 +481,166 @@ ipcMain.on('electron-update-video-positions', async (event, videos) => {
     }
     if (wy + wh > sh) {
       console.log('New window higher than screen height.');
-      break;
+      return null;
     }
-    if (i === 0) {
-      start = Date.now;
-    }
+
+    return wnd;
   }
 
-  // await delay(1000);
+  async function waitForYouTubeToLoad(windows) {
+    // wait for youtube to finish loading
+    let captureIndex = 0;
+    while (captureIndex < 30) { // wait up to 30s for videos to be ready
+      for (let w of windows) {
+        if (w.isReady) {
+          continue; // already ready
+        }
+        const { pixelBuffer, width, height } = captureWindowBitmap(w, true, captureIndex);
 
-  // keep track of when it finished setting up windows
-  let now = Date.now(); // ms timestamp
-
-  // wait for youtube to finish loading
-  let windowIndex = 0, captureIndex = 0;
-  while (captureIndex < 30) { // wait up to 30s for videos to be ready
-    windowIndex = -1;
-    for (let w of windows) {
-      windowIndex++;
-
-      if (w.isReady) {
-        continue; // already ready
-      }
-      const { pixelBuffer, width, height } = captureWindowBitmap(w, true);
-
-      // get first white pixel to define where window is located. sometimes it's offset more (for reasons unknown)
-      if (w.offsetX === -1) {
-        let checkX = 0, offsetX = 0;
-        while (checkX < width) {
-          const rgba = getPixelColor(pixelBuffer, checkX, 262, width, height);
-          if (rgba[0] === 255 && rgba[1] === 255 && rgba[2] === 255) {
-            console.log(`Found offsetX=${checkX}, windowIndex=${windowIndex}, captureIndex=${captureIndex}`)
-            offsetX = checkX;
-            w.offsetX = offsetX;
-            break;
+        // get first white pixel to define where window is located. sometimes it's offset more (for reasons unknown)
+        if (w.offsetX === -1) {
+          let checkX = 0, offsetX = 0;
+          while (checkX < width) {
+            const rgba = getPixelColor(pixelBuffer, checkX, 262, width, height);
+            if (rgba[0] === 255 && rgba[1] === 255 && rgba[2] === 255) {
+              console.log(`Found offsetX=${checkX}, windowIndex=${w.index}, captureIndex=${captureIndex}`)
+              offsetX = checkX;
+              w.offsetX = offsetX;
+              break;
+            }
+            checkX++;
           }
-          checkX++; 
+        }
+
+        // check entire row for color
+        let hasHeader = false;
+        for (let tx = w.offsetX;tx<width / 2;tx++) {
+          const [r, g, b] = getPixelColor(pixelBuffer, tx, 262, width, height);
+          if (r === 255 && g === 0 && b === 51) {
+            hasHeader = true;
+          }
+        }
+        console.log(`Getting header pixel at (X,262), hasHeader=${hasHeader ? 'true' : 'false'}, windowIndex=${w.index}, captureIndex=${captureIndex}`);
+
+        const playButtonRGBA = getPixelColor(pixelBuffer, 420 + w.offsetX, 421, width, height);
+        console.log(`Getting play button pixel at (${420 + w.offsetX},421), color=${playButtonRGBA}, windowIndex=${w.index}, captureIndex=${captureIndex}`);
+
+        if (
+          hasHeader && (
+            playButtonRGBA[0] === 255
+            && playButtonRGBA[1] === 255
+            && playButtonRGBA[2] === 255
+          )
+        ) {
+          w.isReady = true;
+          continue;
         }
       }
 
-      const headerRGBA = getPixelColor(pixelBuffer, 130 + w.offsetX, 262, width, height);
-      console.log(`Getting header pixel at (${130 + w.offsetX},262), color=${headerRGBA}, windowIndex=${windowIndex}, captureIndex=${captureIndex}`);
+      if (windows.every(w => w.isReady)) {
+        // all windows are ready
+        break;
+      };
+      await delay(1000);
 
-      const playButtonRGBA = getPixelColor(pixelBuffer, 420 + w.offsetX, 421, width, height);
-      console.log(`Getting play button pixel at (${420 + w.offsetX},421), color=${playButtonRGBA}, windowIndex=${windowIndex}, captureIndex=${captureIndex}`);
-
-      if (
-        (
-          headerRGBA[0] === 255
-          && headerRGBA[1] === 0
-          && headerRGBA[2] === 51
-        ) && (
-          playButtonRGBA[0] === 255
-          && playButtonRGBA[1] === 255
-          && playButtonRGBA[2] === 255
-        )
-      ) {
-        w.isReady = true;
-        continue;
-      }
+      captureIndex++;
     }
-
-    if (windows.every(w => w.isReady)) {
-      // all windows are ready
-      break;
-    };
-    await delay(1000);
-
-    captureIndex++;
   }
 
-  // click on start
-  console.log('Clicking on all windows to start playing');
-  start = Date.now;
-  for (let w of windows) {
-    let x = w.wx + 320, y = w.wy + 384;
-    SetActiveWindow(w.hwnd);
-    console.log('Clicking at ', x, y);
-    SetCursorPos(x, y);
-    mouse_event(MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP, x, y, 0, 0);
-    await delay(500);
-  }
-
-  // wait for videos to play
-  console.log('Waiting for all windows to start playing');
-  captureIndex = 0;
-  while (captureIndex < 120) { // wait up to 120s for videos to play
-    windowIndex = -1;
+  async function waitForYouTubeToPlay(windows) {
+    // click on start
+    console.log('Clicking on all windows to start playing');
     for (let w of windows) {
-      windowIndex++;
+      let x = w.wx + 320, y = w.wy + 384;
+      SetActiveWindow(w.hwnd);
+      console.log('Clicking at ', x, y);
+      SetCursorPos(x, y);
+      mouse_event(MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP, x, y, 0, 0);
+      await delay(500);
+    }
 
-      if (w.isPlaying) {
-        continue; // already playing
+    // wait for videos to play
+    console.log('Waiting for all windows to start playing');
+    captureIndex = 0;
+    while (captureIndex < 120) { // wait up to 120s for videos to play
+      for (let w of windows) {
+        if (w.isPlaying) {
+          continue; // already playing
+        }
+        const { pixelBuffer, width, height } = captureWindowBitmap(w, true, captureIndex);
+
+        const playButtonRGBA = getPixelColor(pixelBuffer, 420 + w.offsetX, 421, width, height);
+        console.log(`Getting play button pixel at (${420 + w.offsetX},421), color=${playButtonRGBA}, windowIndex=${w.index}, captureIndex=${captureIndex}`);
+
+        if (
+          playButtonRGBA[0] !== 255
+          && playButtonRGBA[1] !== 255
+          && playButtonRGBA[2] !== 255
+        ) {
+          // not white
+          w.isPlaying = true;
+          w.startedPlayingTime = Date.now();
+          continue;
+        }
       }
-      const { pixelBuffer, width, height } = captureWindowBitmap(w, true);
 
-      const playButtonRGBA = getPixelColor(pixelBuffer, 420 + w.offsetX, 421, width, height);
-      console.log(`Getting play button pixel at (${420 + w.offsetX},421), color=${playButtonRGBA}, windowIndex=${windowIndex}, captureIndex=${captureIndex}`);
+      if (windows.every(w => w.isPlaying)) {
+        // all windows are playing
+        break;
+      };
+      await delay(1000);
 
-      if (
-        playButtonRGBA[0] !== 255
-        && playButtonRGBA[1] !== 255
-        && playButtonRGBA[2] !== 255
-      ) {
-        // not white
-        w.isPlaying = true;
+      captureIndex++;
+    }
+  }
+
+  // --------------------------------------------------------
+  // clear any video-positions-* files
+  const files = fs.readdirSync(projectDir);
+  const targets = files.filter(file =>
+    file.startsWith('video-positions-') && file.endsWith('.png')
+  );
+  targets.forEach(file => {
+    const filePath = path.join(projectDir, file);
+    fs.unlinkSync(filePath);
+  });
+  
+  let videoIndex = 0;
+  while (videoIndex < videos.length) {
+    const batch = [];
+
+    for (let i=0;i<numberToLoad && videoIndex < videos.length;i++) {
+      const video = videos[videoIndex];
+
+      if (video.source !== 'youtube') {
         continue;
+      }
+      if (video.position <= 1) {
+        continue;
+      }
+
+      console.log('------------------', video.url, videoIndex);
+      batch.push({video, videoIndex});
+      videoIndex++;
+    }
+
+    // create video windows
+    if (batch.length === 0) {
+      break;
+    }
+    const windowBatch = [];
+    for (let b of batch) {
+      const wnd = await createWindow(b.video, b.videoIndex);
+      if (wnd) {
+        windowBatch.push(wnd);
       }
     }
 
-    if (windows.every(w => w.isPlaying)) {
-      // all windows are playing
-      break;
-    };
-    await delay(1000);
+    // wait for youtube to finish loading
+    await waitForYouTubeToLoad(windowBatch);
 
-    captureIndex++;
+    // wait for youtube to play and start
+    await waitForYouTubeToPlay(windowBatch);
   }
 
   console.log('Playing for some time.');
@@ -608,6 +649,13 @@ ipcMain.on('electron-update-video-positions', async (event, videos) => {
   // click to pause
   console.log('Clicking on all windows to pause');
   for (let w of windows) {
+    const now = Date.now(), 
+      ellapsed = now - w.startedPlayingTime;
+    if (w.position + ellapsed >= w.duration - 5000) {
+      console.log('Within 5 seconds of end of video. Just close window.');
+      continue;
+    }
+
     let x = w.wx + 320, y = w.wy + 384;
     SetActiveWindow(w.hwnd);
     console.log('Clicking at ', x, y);
