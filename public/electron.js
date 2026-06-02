@@ -204,7 +204,7 @@ ipcMain.on('electron-update-video-positions', async (event, videos) => {
     return [0, 0, 0, 0];
   }
 
-  function captureWindowBitmap(w, savePng, captureIndex) {
+  function captureWindowBitmap(w, savePng, suffix) {
     const physicalX = w.wx; //Math.round(w.wx * scale);
     const physicalY = w.wy; //Math.round(w.wy * scale);
     const physicalW = w.ww; //Math.round(w.ww * scale);
@@ -310,7 +310,7 @@ ipcMain.on('electron-update-video-positions', async (event, videos) => {
         pngChunk('IEND', Buffer.alloc(0)),
       ]);
 
-      const fileName = `video-positions-${w.index}-${captureIndex}.png`;
+      const fileName = `video-positions-${w.index}-${suffix}.png`;
       const fullPath = path.join(projectDir, fileName);
       fs.writeFileSync(fullPath, png);
       console.log(`Saved PNG to ${fullPath}`);
@@ -490,12 +490,12 @@ ipcMain.on('electron-update-video-positions', async (event, videos) => {
   async function waitForYouTubeToLoad(windows) {
     // wait for youtube to finish loading
     let captureIndex = 0;
-    while (captureIndex < 30) { // wait up to 30s for videos to be ready
+    while (captureIndex < 25) { // wait up to 25s for videos to be ready
       for (let w of windows) {
         if (w.isReady) {
           continue; // already ready
         }
-        const { pixelBuffer, width, height } = captureWindowBitmap(w, true, captureIndex);
+        const { pixelBuffer, width, height } = captureWindowBitmap(w, true, `load-${captureIndex}`);
 
         // get first white pixel to define where window is located. sometimes it's offset more (for reasons unknown)
         if (w.offsetX === -1) {
@@ -512,7 +512,7 @@ ipcMain.on('electron-update-video-positions', async (event, videos) => {
           }
         }
 
-        // check entire row for color
+        // check entire row for color // this is looking for the red youtube logo
         let hasHeader = false;
         for (let tx = w.offsetX;tx<width / 2;tx++) {
           const [r, g, b] = getPixelColor(pixelBuffer, tx, 262, width, height);
@@ -522,15 +522,25 @@ ipcMain.on('electron-update-video-positions', async (event, videos) => {
         }
         console.log(`Getting header pixel at (X,262), hasHeader=${hasHeader ? 'true' : 'false'}, windowIndex=${w.index}, captureIndex=${captureIndex}`);
 
+        // check if white play button is showing (video starts paused)
         const playButtonRGBA = getPixelColor(pixelBuffer, 420 + w.offsetX, 421, width, height);
         console.log(`Getting play button pixel at (${420 + w.offsetX},421), color=${playButtonRGBA}, windowIndex=${w.index}, captureIndex=${captureIndex}`);
+        const hasPlayButton = (playButtonRGBA[0] === 255 && playButtonRGBA[1] === 255 && playButtonRGBA[2] === 255);
 
+        // sometimes video just plays right away without showing button, check if center of y:380 is not black
+        for (let tx = w.offsetX+80;tx<width-80-w.offsetX;tx++) {
+          const [r, g, b] = getPixelColor(pixelBuffer, tx, 380, width, height);
+          if (r !== 0 && g !== 0 && b !== 0) {
+            w.isPlaying = true;
+            w.startedPlayingTime = Date.now();
+            break;
+          }
+        }
+        console.log(`Checking (Y,380) from (X,${w.offsetX + 80} to ${width - 80 - w.offsetX} is not all black, isPlaying=${w.isPlaying}, windowIndex=${w.index}, captureIndex=${captureIndex}`)
+
+        // ready if header loaded and is playing or has the white play button
         if (
-          hasHeader && (
-            playButtonRGBA[0] === 255
-            && playButtonRGBA[1] === 255
-            && playButtonRGBA[2] === 255
-          )
+          hasHeader && (hasPlayButton || w.isPlaying)
         ) {
           w.isReady = true;
           continue;
@@ -551,6 +561,10 @@ ipcMain.on('electron-update-video-positions', async (event, videos) => {
     // click on start
     console.log('Clicking on all windows to start playing');
     for (let w of windows) {
+      if (w.isPlaying) {
+        // window is already playing: it started playing on window load
+        continue;
+      }
       let x = w.wx + 320, y = w.wy + 384;
       SetActiveWindow(w.hwnd);
       console.log('Clicking at ', x, y);
@@ -567,8 +581,9 @@ ipcMain.on('electron-update-video-positions', async (event, videos) => {
         if (w.isPlaying) {
           continue; // already playing
         }
-        const { pixelBuffer, width, height } = captureWindowBitmap(w, true, captureIndex);
+        const { pixelBuffer, width, height } = captureWindowBitmap(w, true, `play-${captureIndex}`);
 
+        // wait for the white play button pixel to be gone
         const playButtonRGBA = getPixelColor(pixelBuffer, 420 + w.offsetX, 421, width, height);
         console.log(`Getting play button pixel at (${420 + w.offsetX},421), color=${playButtonRGBA}, windowIndex=${w.index}, captureIndex=${captureIndex}`);
 
@@ -650,9 +665,9 @@ ipcMain.on('electron-update-video-positions', async (event, videos) => {
   console.log('Clicking on all windows to pause');
   for (let w of windows) {
     const now = Date.now(), 
-      ellapsed = now - w.startedPlayingTime;
-    if (w.position + ellapsed >= w.duration - 5000) {
-      console.log('Within 5 seconds of end of video. Just close window.');
+      elapsed = now - w.startedPlayingTime;
+    if (w.position + elapsed >= w.duration - 30000) {
+      console.log(`Within 30 seconds of end of video. Just close window. windowIndex=${w.index}, position=${w.position}, elapsed=${elapsed}, duration=${w.duration}`);
       continue;
     }
 
